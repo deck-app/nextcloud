@@ -1,0 +1,10 @@
+version: "3"
+services:
+  nextcloud:
+    image: "nextcloud"
+    restart: "always"
+    ports:
+      - "${NC_HTTP_PORT}:80"
+    volumes:
+      - "${APP_CODE_PATH_HOST}:/var/www/html"
+volumes: {}
