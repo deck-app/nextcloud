@@ -1,0 +1,71 @@
+ARG BACK_END
+FROM ghcr.io/deck-app/${BACK_END}:v8.1
+LABEL maintainer Naba Das <hello@get-deck.com>
+
+# Persistent runtime dependencies
+# Example RUN apk add --no-cache php81-openssl php81-sysvmsg php81-curl
+RUN apk add --no-cache tar git php81-gd php81-pdo php81-pdo_dblib php81-pdo_mysql php81-pdo_odbc php81-pdo_pgsql php81-pdo_sqlite
+
+RUN mkdir -p /app
+RUN mkdir -p /var/preview
+COPY httpd.conf /app/httpd.conf
+COPY httpd.conf /etc/apache2/httpd.conf
+RUN wget -O /var/preview/index.html https://raw.githubusercontent.com/deck-app/stack-preview-screen/main/install/index.html
+
+ARG SERVER_ROOT
+RUN sed -i "s#{SERVER_ROOT}#/var/preview#g" /etc/apache2/httpd.conf
+RUN sed -i "s#{SERVER_ROOT}#/var/www/#g" /app/httpd.conf
+RUN apk add --no-cache zip
+
+WORKDIR /var/www
+#PHP display error enable or disable
+COPY php.ini /etc/php81/php.ini
+ARG DISPLAY_PHPERROR
+RUN if [ ${DISPLAY_PHPERROR} = true ]; then \
+sed -i "s#{DISPLAY}#On#g" /etc/php81/php.ini \
+;else \
+sed -i "s#{DISPLAY}#Off#g" /etc/php81/php.ini \
+;fi
+
+#Xdebug enable or disable
+ARG XDEBUG
+RUN if [ ${XDEBUG} = true ]; then \
+apk add php81-pecl-xdebug \
+&& echo "zend_extension=xdebug" >> /etc/php81/php.ini \
+;fi
+
+## Linux permission issue
+ARG USER_ID
+ARG GROUP_ID
+RUN apk --no-cache add shadow unzip php81-imap sudo
+RUN usermod -u ${USER_ID} apache && groupmod -g ${GROUP_ID} apache
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+#Application Download
+RUN curl -fLk -o /app/nextcloud.zip  "https://download.nextcloud.com/server/releases/nextcloud-24.0.2.zip"
+RUN cd /app/ && unzip nextcloud.zip && rm nextcloud.zip 
+
+# sudo command without password
+RUN echo "apache ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+RUN sed -i "s#{BACK_END}#${BACK_END}#g" /docker-entrypoint.sh
+
+RUN chmod +x /docker-entrypoint.sh
+## apache2 permission issue
+RUN usermod --home /home apache
+RUN touch /env
+RUN chown -R apache:apache /env
+RUN chown -R apache:apache /home
+RUN chown -R apache:apache /var/preview/
+RUN chown -R apache:apache /usr/sbin/httpd
+RUN chown -R apache:apache /etc/service/apache
+RUN chown -R apache:apache /sbin/
+RUN chown -R apache:apache /var/www/
+RUN chown -R apache:apache /run
+RUN chown -R apache:apache /etc/service/
+RUN chown -R apache:apache /var/run/apache2
+RUN chown -R apache:apache /etc/apache2
+RUN chown -R apache:apache /var/log/apache2
+USER apache
+CMD /docker-entrypoint.sh & /sbin/runit-wrapper

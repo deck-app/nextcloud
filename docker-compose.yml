@@ -2,7 +2,7 @@ version: '3'
 services:
   nextcloud:
     build:
-      context: 'nextcloud'
+      context: 'nextcloud/${BACK_END}'
       dockerfile: 'Dockerfile-${PHP_VERSION}'
       args:
         - 'BACK_END=${BACK_END}'

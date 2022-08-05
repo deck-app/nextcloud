@@ -1,0 +1,73 @@
+FROM ghcr.io/deck-app/nginx:v8.0
+LABEL maintainer Naba Das <hello@get-deck.com>
+
+# Persistent runtime dependencies
+# Example RUN apk add --no-cache php8-openssl php8-sysvmsg php8-curl
+RUN apk add --no-cache tar git php8-gd php8-pdo php8-pdo_dblib php8-pdo_mysql php8-pdo_odbc php8-pdo_pgsql php8-pdo_sqlite
+
+RUN mkdir -p /app
+RUN mkdir -p /var/preview
+COPY default.conf /app/default.conf
+COPY default.conf /etc/nginx/conf.d/default.conf
+RUN wget -O /var/preview/index.html https://raw.githubusercontent.com/deck-app/stack-preview-screen/main/install/index.html
+
+ARG SERVER_ROOT
+RUN sed -i "s#{SERVER_ROOT}#/var/preview#g" /etc/nginx/conf.d/default.conf
+RUN sed -i "s#{SERVER_ROOT}#/var/www/#g" /app/default.conf
+
+RUN apk add --no-cache zip
+
+WORKDIR /var/www
+#PHP display error enable or disable
+COPY php.ini /etc/php8/php.ini
+ARG DISPLAY_PHPERROR
+RUN if [ ${DISPLAY_PHPERROR} = true ]; then \
+sed -i "s#{DISPLAY}#On#g" /etc/php8/php.ini \
+;else \
+sed -i "s#{DISPLAY}#Off#g" /etc/php8/php.ini \
+;fi
+
+#Xdebug enable or disable
+ARG XDEBUG
+RUN if [ ${XDEBUG} = true ]; then \
+apk add php8-pecl-xdebug \
+&& echo "zend_extension=xdebug" >> /etc/php8/php.ini \
+;fi
+
+## Linux permission issue
+ARG USER_ID
+ARG GROUP_ID
+RUN apk --no-cache add shadow unzip php8-imap sudo
+RUN usermod -u ${USER_ID} nobody && groupmod -g ${GROUP_ID} nobody
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+#Application Download
+RUN curl -fLk -o /app/nextcloud.zip  "https://download.nextcloud.com/server/releases/nextcloud-24.0.2.zip"
+RUN cd /app/ && unzip nextcloud.zip && rm nextcloud.zip 
+
+# sudo command without password
+RUN echo "nobody ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+RUN sed -i "s#{BACK_END}#${BACK_END}#g" /docker-entrypoint.sh
+
+RUN chmod +x /docker-entrypoint.sh
+
+## nobody permission issue
+RUN usermod --home /home nobody
+COPY www.conf /etc/php8/php-fpm.d/www.conf
+COPY nginx.conf /etc/nginx/nginx.conf
+RUN touch /env
+RUN chown -R nobody:nobody /env
+RUN chown -R nobody:nobody /home
+RUN chown -R nobody:nobody /run/nginx
+RUN chown -R nobody:nobody /var/preview/
+RUN chown -R nobody:nobody /sbin/
+RUN chown -R nobody:nobody /etc/php8/
+RUN chown -R nobody:nobody /etc/service/
+RUN chown -R nobody:nobody /var/run/
+RUN chown -R nobody:nobody /var/log/
+RUN chown -R nobody:nobody /var/lib/nginx
+RUN chown -R nobody:nobody /etc/nginx
+USER nobody
+
+CMD /docker-entrypoint.sh & /sbin/runit-wrapper
