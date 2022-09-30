@@ -8,7 +8,7 @@ then
 else  
     cd /var/www
     echo >&2 "NextCloud not found in $(pwd) - Create apps please patience..."
-    Sudo tar cf - --one-file-system -C /app/nextcloud/ . | tar xf -
+    sudo tar cf - --one-file-system -C /app/nextcloud/ . | tar xf -
 fi
 
 sudo rm -rf /var/preview
