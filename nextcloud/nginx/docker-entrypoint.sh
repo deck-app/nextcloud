@@ -8,13 +8,13 @@ then
 else  
     cd /var/www
     echo >&2 "NextCloud not found in $(pwd) - Create apps please patience..."
-    sudo tar cf - --one-file-system -C /app/nextcloud/ . | tar xf -
+    tar cf - --one-file-system -C /app/nextcloud/ . | tar xf -
 fi
 
-sudo cp /app/default.conf /etc/nginx/conf.d/default.conf
+cp /app/default.conf /etc/nginx/conf.d/default.conf
 nginx -s reload
-sudo chown -R nobody:nobody /var/www 2> /dev/null
+chown -R nobody:nobody /var/www 2> /dev/null
 
-sudo rm -rf /var/preview
-sudo rm -rf /app/default.conf
+rm -rf /var/preview
+rm -rf /app/default.conf
 exec "$@"

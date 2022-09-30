@@ -52,19 +52,4 @@ RUN echo "apache ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN sed -i "s#{BACK_END}#${BACK_END}#g" /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-## apache2 permission issue
-RUN usermod --home /home apache
-RUN touch /env
-RUN chown -R apache:apache /env
-RUN chown -R apache:apache /home
-RUN chown -R apache:apache /var/preview/
-RUN chown -R apache:apache /usr/sbin/httpd
-RUN chown -R apache:apache /etc/service/apache
-RUN chown -R apache:apache /sbin/
-RUN chown -R apache:apache /run
-RUN chown -R apache:apache /etc/service/
-RUN chown -R apache:apache /etc/apache2
-RUN chown -R apache:apache /var/run/apache2
-RUN chown -R apache:apache /var/log/apache2
-USER apache
 CMD /docker-entrypoint.sh & /sbin/runit-wrapper

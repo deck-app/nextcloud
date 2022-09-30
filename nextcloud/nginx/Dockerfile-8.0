@@ -52,22 +52,4 @@ RUN sed -i "s#{BACK_END}#${BACK_END}#g" /docker-entrypoint.sh
 
 RUN chmod +x /docker-entrypoint.sh
 
-## nobody permission issue
-RUN usermod --home /home nobody
-COPY www.conf /etc/php8/php-fpm.d/www.conf
-COPY nginx.conf /etc/nginx/nginx.conf
-RUN touch /env
-RUN chown -R nobody:nobody /env
-RUN chown -R nobody:nobody /home
-RUN chown -R nobody:nobody /run/
-RUN chown -R nobody:nobody /var/preview/
-RUN chown -R nobody:nobody /sbin/
-RUN chown -R nobody:nobody /etc/php8/
-RUN chown -R nobody:nobody /etc/service/
-RUN chown -R nobody:nobody /var/run/
-RUN chown -R nobody:nobody /var/log/
-RUN chown -R nobody:nobody /var/lib/nginx
-RUN chown -R nobody:nobody /etc/nginx
-USER nobody
-
 CMD /docker-entrypoint.sh & /sbin/runit-wrapper
